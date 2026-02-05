@@ -143,12 +143,7 @@ app.get("/api/posts", ensureAuthenticated, async (req, res) => {
       `SELECT p.id, p.content, p.created_at, u.username AS author
        FROM posts p
        JOIN users u ON p.user_id = u.id
-       WHERE p.user_id = $1
-          OR p.user_id IN (
-            SELECT followed_id FROM follows WHERE follower_id = $1
-          )
-       ORDER BY p.created_at DESC`,
-      [req.user.id]
+       ORDER BY p.created_at DESC`
     );
     res.json(rows);
   } catch (err) {

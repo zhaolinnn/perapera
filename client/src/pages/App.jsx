@@ -49,21 +49,35 @@ function AuthForm({ onAuth }) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="w-full max-w-md bg-slate-900/60 border border-slate-800 rounded-xl p-8 shadow-xl">
-        <h1 className="text-2xl font-semibold mb-6 text-center">Perapera</h1>
-        <div className="flex justify-center mb 6">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-emerald-50 to-emerald-100">
+      <div className="w-full max-w-md bg-white border border-emerald-100 rounded-3xl p-8 shadow-[0_18px_60px_rgba(15,118,110,0.18)]">
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <div className="h-9 w-9 rounded-2xl bg-emerald-400 flex items-center justify-center shadow-inner">
+            <span className="text-xl font-black text-white leading-none">ぺ</span>
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-emerald-700">
+            Perapera
+          </h1>
+        </div>
+        <p className="text-sm text-emerald-800/80 text-center mb-6">
+          Share short language thoughts with friends.
+        </p>
+        <div className="flex justify-center mb-6 bg-emerald-50 rounded-full p-0.5">
           <button
-            className={`px-3 py-1 rounded-l-full text-sm border border-slate-700 ${
-              mode === "login" ? "bg-slate-100 text-slate-900" : "bg-slate-800"
+            className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
+              mode === "login"
+                ? "bg-white text-emerald-700 shadow-sm"
+                : "text-emerald-600"
             }`}
             onClick={() => setMode("login")}
           >
             Login
           </button>
           <button
-            className={`px-3 py-1 rounded-r-full text-sm border border-slate-700 border-l-0 ${
-              mode === "register" ? "bg-slate-100 text-slate-900" : "bg-slate-800"
+            className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
+              mode === "register"
+                ? "bg-white text-emerald-700 shadow-sm"
+                : "text-emerald-600"
             }`}
             onClick={() => setMode("register")}
           >
@@ -72,26 +86,34 @@ function AuthForm({ onAuth }) {
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm mb-1">Username</label>
+            <label className="block text-xs font-medium mb-1 text-emerald-900">
+              Username
+            </label>
             <input
-              className="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-2xl bg-emerald-50 border border-emerald-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
           </div>
           <div>
-            <label className="block text-sm mb-1">Password</label>
+            <label className="block text-xs font-medium mb-1 text-emerald-900">
+              Password
+            </label>
             <input
               type="password"
-              className="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded-2xl bg-emerald-50 border border-emerald-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          {error && (
+            <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
+              {error}
+            </p>
+          )}
           <button
             type="submit"
-            className="w-full py-2 rounded-lg bg-indigo-500 hover:bg-indigo-400 transition text-sm font-medium"
+            className="w-full py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 transition text-sm font-semibold text-white shadow-[0_10px_30px_rgba(16,185,129,0.6)]"
           >
             {mode === "login" ? "Login" : "Create account"}
           </button>
@@ -157,79 +179,99 @@ function Feed({ user, onLogout }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900">
-      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur">
-        <div className="mx-auto max-w-3xl px-4 py-3 flex items-center justify-between">
-          <h1 className="font-semibold">Perapera</h1>
+    <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-emerald-100">
+      <header className="border-b border-emerald-100 bg-white/90 backdrop-blur">
+        <div className="mx-auto max-w-4xl px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img
+              src="/logo.png"
+              alt="Perapera logo"
+              className="h-12 w-12 object-contain"
+            />
+            <div className="flex flex-col leading-tight">
+              <span className="font-semibold text-emerald-700 text-sm">
+                Perapera
+              </span>
+              <span className="text-[11px] text-emerald-700/70">
+                Tiny thoughts in any language.
+              </span>
+            </div>
+          </div>
           <div className="flex items-center gap-3 text-sm">
-            <span className="text-slate-300">@{user.username}</span>
+            <span className="text-emerald-800 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full text-xs">
+              @{user.username}
+            </span>
             <button
               onClick={onLogout}
-              className="px-3 py-1 rounded-full border border-slate-700 text-xs hover:bg-slate-800"
+              className="px-3 py-1 rounded-full border border-emerald-200 text-xs text-emerald-700 hover:bg-emerald-50"
             >
               Log out
             </button>
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-3xl px-4 py-6 space-y-6">
+      <main className="mx-auto max-w-4xl px-4 py-6 space-y-6">
         <form
           onSubmit={createPost}
-          className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 space-y-3"
+          className="bg-white border border-emerald-100 rounded-3xl p-4 space-y-3 shadow-sm"
         >
           <textarea
             rows={3}
-            className="w-full resize-none rounded-lg bg-slate-950 border border-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="What's on your mind?"
+            className="w-full resize-none rounded-2xl bg-emerald-50 border border-emerald-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            placeholder="Share a phrase, vocab, or thought…"
             value={content}
             onChange={(e) => setContent(e.target.value)}
           />
           <div className="flex justify-end">
             <button
               type="submit"
-              className="px-4 py-1.5 rounded-full bg-indigo-500 hover:bg-indigo-400 text-xs font-medium"
+              className="px-4 py-1.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-xs font-semibold text-white shadow-[0_10px_30px_rgba(16,185,129,0.6)]"
             >
               Post
             </button>
           </div>
         </form>
         {error && (
-          <p className="text-xs text-red-400 bg-red-950/40 border border-red-900 rounded-lg px-3 py-2">
+          <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
             {error}
           </p>
         )}
         <section className="space-y-3">
-          <h2 className="text-sm font-medium text-slate-300">Feed</h2>
+          <h2 className="text-sm font-semibold text-emerald-900">
+            Community feed
+          </h2>
           {loading ? (
-            <p className="text-xs text-slate-400">Loading posts...</p>
+            <p className="text-xs text-emerald-700/70">Loading posts...</p>
           ) : posts.length === 0 ? (
-            <p className="text-xs text-slate-400">No posts yet. Say something!</p>
+            <p className="text-xs text-emerald-700/70">
+              No posts yet. Be the first to share something!
+            </p>
           ) : (
             <ul className="space-y-3">
               {posts.map((post) => (
                 <li
                   key={post.id}
-                  className="bg-slate-900/80 border border-slate-800 rounded-xl p-3 text-sm"
+                  className="bg-white border border-emerald-100 rounded-2xl p-3 text-sm shadow-sm"
                 >
                   <div className="flex justify-between items-start gap-2 mb-1">
                     <div>
-                      <p className="font-medium text-xs text-slate-200">
+                      <p className="font-semibold text-xs text-emerald-800">
                         @{post.author}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-[11px] text-emerald-700/70">
                         {new Date(post.created_at).toLocaleString()}
                       </p>
                     </div>
                     {post.author === user.username && (
                       <button
                         onClick={() => deletePost(post.id)}
-                        className="text-[11px] text-red-400 hover:text-red-300"
+                        className="text-[11px] text-red-500 hover:text-red-400"
                       >
                         Delete
                       </button>
                     )}
                   </div>
-                  <p className="mt-1 text-sm text-slate-100 whitespace-pre-wrap">
+                  <p className="mt-1 text-sm text-slate-900 whitespace-pre-wrap">
                     {post.content}
                   </p>
                 </li>
@@ -255,7 +297,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-sm text-slate-300">
+      <div className="min-h-screen flex items-center justify-center text-sm text-emerald-700">
         Loading...
       </div>
     );
