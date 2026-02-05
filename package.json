@@ -1,0 +1,15 @@
+{
+  "name": "perapera",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Perapera social media app (React, Tailwind, Node, Postgres, Passport).",
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace server & npm run dev --workspace client",
+    "server": "npm run dev --workspace server",
+    "client": "npm run dev --workspace client"
+  }
+}
