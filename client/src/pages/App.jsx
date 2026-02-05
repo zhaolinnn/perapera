@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Routes, Route } from "react-router-dom";
 import Header from "../components/Header.jsx";
 import PostCard from "../components/PostCard.jsx";
@@ -130,8 +130,27 @@ function AuthForm({ onAuth }) {
 function Feed({ user, onLogout }) {
   const [posts, setPosts] = useState([]);
   const [content, setContent] = useState("");
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [showTagMenu, setShowTagMenu] = useState(false);
+  const [availableTags, setAvailableTags] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const tagMenuRef = useRef(null);
+
+  useEffect(() => {
+    loadTags();
+  }, []);
+
+  async function loadTags() {
+    try {
+      const res = await fetch("/api/tags", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load tags");
+      const data = await res.json();
+      setAvailableTags(data);
+    } catch (err) {
+      console.error("Failed to load tags:", err);
+    }
+  }
 
   async function loadPosts() {
     setLoading(true);
@@ -151,6 +170,26 @@ function Feed({ user, onLogout }) {
     loadPosts();
   }, []);
 
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (showTagMenu && tagMenuRef.current && !tagMenuRef.current.contains(event.target)) {
+        setShowTagMenu(false);
+      }
+    }
+    if (showTagMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showTagMenu]);
+
+  function toggleTag(tagName) {
+    setSelectedTags((prev) =>
+      prev.includes(tagName)
+        ? prev.filter((t) => t !== tagName)
+        : [...prev, tagName]
+    );
+  }
+
   async function createPost(e) {
     e.preventDefault();
     if (!content.trim()) return;
@@ -159,10 +198,12 @@ function Feed({ user, onLogout }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, tags: selectedTags }),
       });
       if (!res.ok) throw new Error("Failed to create post");
       setContent("");
+      setSelectedTags([]);
+      setShowTagMenu(false);
       loadPosts();
     } catch (err) {
       setError(err.message);
@@ -246,7 +287,70 @@ function Feed({ user, onLogout }) {
             value={content}
             onChange={(e) => setContent(e.target.value)}
           />
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between">
+            <div className="relative" ref={tagMenuRef}>
+              <button
+                type="button"
+                onClick={() => setShowTagMenu(!showTagMenu)}
+                className="px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-700 hover:bg-emerald-100 transition"
+              >
+                Add tag(s)
+              </button>
+              {showTagMenu && (
+                <div className="absolute top-full left-0 mt-2 bg-white border border-emerald-100 rounded-xl shadow-lg p-2 z-10 min-w-[200px]">
+                  {availableTags.map((tag) => {
+                    const isChinese = tag.name === "chinese";
+                    const isJapanese = tag.name === "japanese";
+                    const isSelected = selectedTags.includes(tag.name);
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() => toggleTag(tag.name)}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-xs transition ${
+                          isSelected
+                            ? isChinese
+                              ? "bg-red-100 text-red-700 font-medium"
+                              : isJapanese
+                              ? "bg-blue-100 text-blue-700 font-medium"
+                              : "bg-emerald-100 text-emerald-700 font-medium"
+                            : isChinese
+                            ? "text-red-700 hover:bg-red-50"
+                            : isJapanese
+                            ? "text-blue-700 hover:bg-blue-50"
+                            : "text-emerald-700 hover:bg-emerald-50"
+                        }`}
+                      >
+                        {tag.display_name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {selectedTags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {selectedTags.map((tagName) => {
+                    const tag = availableTags.find((t) => t.name === tagName);
+                    const isChinese = tagName === "chinese";
+                    const isJapanese = tagName === "japanese";
+                    return (
+                      <span
+                        key={tagName}
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                          isChinese
+                            ? "bg-red-50 border border-red-200 text-red-700"
+                            : isJapanese
+                            ? "bg-blue-50 border border-blue-200 text-blue-700"
+                            : "bg-emerald-100 text-emerald-700"
+                        }`}
+                      >
+                        {tag?.display_name || tagName}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
             <button
               type="submit"
               className="px-4 py-1.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-xs font-semibold text-white shadow-[0_10px_30px_rgba(16,185,129,0.6)]"

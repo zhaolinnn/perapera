@@ -47,6 +47,28 @@ export default function PostCard({
       <p className="mt-1 text-sm text-slate-900 whitespace-pre-wrap">
         {post.content}
       </p>
+      {post.tags && post.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {post.tags.map((tag) => {
+            const isChinese = tag.name === "chinese";
+            const isJapanese = tag.name === "japanese";
+            return (
+              <span
+                key={tag.id}
+                className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                  isChinese
+                    ? "bg-red-50 border border-red-200 text-red-700"
+                    : isJapanese
+                    ? "bg-blue-50 border border-blue-200 text-blue-700"
+                    : "bg-emerald-50 border border-emerald-100 text-emerald-700"
+                }`}
+              >
+                {tag.display_name}
+              </span>
+            );
+          })}
+        </div>
+      )}
       {onVote && (
         <div className="flex items-center gap-2 mt-3 pt-2 border-t border-emerald-50">
           <button

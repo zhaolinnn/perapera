@@ -157,7 +157,22 @@ app.get("/api/posts", ensureAuthenticated, async (req, res) => {
        ORDER BY p.created_at DESC`,
       [req.user.id]
     );
-    res.json(rows);
+
+    // Get tags for each post
+    const postsWithTags = await Promise.all(
+      rows.map(async (post) => {
+        const { rows: tagRows } = await pool.query(
+          `SELECT t.id, t.name, t.display_name 
+           FROM tags t
+           JOIN post_tags pt ON pt.tag_id = t.id
+           WHERE pt.post_id = $1`,
+          [post.id]
+        );
+        return { ...post, tags: tagRows };
+      })
+    );
+
+    res.json(postsWithTags);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -165,16 +180,45 @@ app.get("/api/posts", ensureAuthenticated, async (req, res) => {
 });
 
 app.post("/api/posts", ensureAuthenticated, async (req, res) => {
-  const { content } = req.body;
+  const { content, tags } = req.body;
   if (!content) {
     return res.status(400).json({ error: "Content required" });
   }
   try {
-    const { rows } = await pool.query(
-      "INSERT INTO posts (user_id, content) VALUES ($1, $2) RETURNING id, content, created_at",
-      [req.user.id, content]
-    );
-    res.status(201).json(rows[0]);
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      const { rows } = await client.query(
+        "INSERT INTO posts (user_id, content) VALUES ($1, $2) RETURNING id, content, created_at",
+        [req.user.id, content]
+      );
+      const post = rows[0];
+
+      // Add tags if provided
+      if (tags && Array.isArray(tags) && tags.length > 0) {
+        for (const tagName of tags) {
+          const { rows: tagRows } = await client.query(
+            "SELECT id FROM tags WHERE name = $1",
+            [tagName]
+          );
+          if (tagRows.length > 0) {
+            await client.query(
+              "INSERT INTO post_tags (post_id, tag_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+              [post.id, tagRows[0].id]
+            );
+          }
+        }
+      }
+
+      await client.query("COMMIT");
+      res.status(201).json(post);
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -307,6 +351,16 @@ app.delete("/api/posts/:id/vote", ensureAuthenticated, async (req, res) => {
   }
 });
 
+app.get("/api/tags", ensureAuthenticated, async (req, res) => {
+  try {
+    const { rows } = await pool.query("SELECT id, name, display_name FROM tags ORDER BY name");
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 app.get("/api/users/:username", ensureAuthenticated, async (req, res) => {
   const { username } = req.params;
   try {
@@ -340,6 +394,20 @@ app.get("/api/users/:username", ensureAuthenticated, async (req, res) => {
       [req.user.id, profileUser.id]
     );
 
+    // Get tags for each post
+    const postsWithTags = await Promise.all(
+      postRows.map(async (post) => {
+        const { rows: tagRows } = await pool.query(
+          `SELECT t.id, t.name, t.display_name 
+           FROM tags t
+           JOIN post_tags pt ON pt.tag_id = t.id
+           WHERE pt.post_id = $1`,
+          [post.id]
+        );
+        return { ...post, tags: tagRows };
+      })
+    );
+
     res.json({
       user: {
         id: profileUser.id,
@@ -350,7 +418,7 @@ app.get("/api/users/:username", ensureAuthenticated, async (req, res) => {
         following_count: parseInt(profileUser.following_count),
         is_following: profileUser.is_following,
       },
-      posts: postRows,
+      posts: postsWithTags,
     });
   } catch (err) {
     console.error(err);

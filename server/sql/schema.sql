@@ -27,6 +27,23 @@ CREATE TABLE IF NOT EXISTS votes (
   PRIMARY KEY (post_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS tags (
+  id SERIAL PRIMARY KEY,
+  name TEXT UNIQUE NOT NULL,
+  display_name TEXT NOT NULL
+);
+
+INSERT INTO tags (name, display_name) VALUES 
+  ('chinese', 'Chinese 汉语'),
+  ('japanese', 'Japanese 日本語')
+ON CONFLICT (name) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS post_tags (
+  post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  tag_id INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  PRIMARY KEY (post_id, tag_id)
+);
+
 CREATE TABLE IF NOT EXISTS "session" (
   sid varchar NOT NULL COLLATE "default",
   sess json NOT NULL,
