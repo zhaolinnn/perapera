@@ -158,8 +158,8 @@ app.get("/api/posts", ensureAuthenticated, async (req, res) => {
       [req.user.id]
     );
 
-    // Get tags for each post
-    const postsWithTags = await Promise.all(
+    // Get tags and comments for each post
+    const postsWithTagsAndComments = await Promise.all(
       rows.map(async (post) => {
         const { rows: tagRows } = await pool.query(
           `SELECT t.id, t.name, t.display_name 
@@ -168,11 +168,19 @@ app.get("/api/posts", ensureAuthenticated, async (req, res) => {
            WHERE pt.post_id = $1`,
           [post.id]
         );
-        return { ...post, tags: tagRows };
+        const { rows: commentRows } = await pool.query(
+          `SELECT c.id, c.content, c.created_at, u.username AS author, u.id AS author_id
+           FROM comments c
+           JOIN users u ON c.user_id = u.id
+           WHERE c.post_id = $1
+           ORDER BY c.created_at ASC`,
+          [post.id]
+        );
+        return { ...post, tags: tagRows, comments: commentRows };
       })
     );
 
-    res.json(postsWithTags);
+    res.json(postsWithTagsAndComments);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -351,6 +359,44 @@ app.delete("/api/posts/:id/vote", ensureAuthenticated, async (req, res) => {
   }
 });
 
+app.post("/api/posts/:id/comments", ensureAuthenticated, async (req, res) => {
+  const { id } = req.params;
+  const { content } = req.body;
+  if (!content || !content.trim()) {
+    return res.status(400).json({ error: "Comment content required" });
+  }
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO comments (post_id, user_id, content) 
+       VALUES ($1, $2, $3) 
+       RETURNING id, content, created_at, 
+       (SELECT username FROM users WHERE id = $2) AS author`,
+      [id, req.user.id, content.trim()]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.delete("/api/comments/:id", ensureAuthenticated, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { rowCount } = await pool.query(
+      "DELETE FROM comments WHERE id = $1 AND user_id = $2",
+      [id, req.user.id]
+    );
+    if (!rowCount) {
+      return res.status(404).json({ error: "Comment not found" });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 app.get("/api/tags", ensureAuthenticated, async (req, res) => {
   try {
     const { rows } = await pool.query("SELECT id, name, display_name FROM tags ORDER BY name");
@@ -394,8 +440,8 @@ app.get("/api/users/:username", ensureAuthenticated, async (req, res) => {
       [req.user.id, profileUser.id]
     );
 
-    // Get tags for each post
-    const postsWithTags = await Promise.all(
+    // Get tags and comments for each post
+    const postsWithTagsAndComments = await Promise.all(
       postRows.map(async (post) => {
         const { rows: tagRows } = await pool.query(
           `SELECT t.id, t.name, t.display_name 
@@ -404,7 +450,15 @@ app.get("/api/users/:username", ensureAuthenticated, async (req, res) => {
            WHERE pt.post_id = $1`,
           [post.id]
         );
-        return { ...post, tags: tagRows };
+        const { rows: commentRows } = await pool.query(
+          `SELECT c.id, c.content, c.created_at, u.username AS author, u.id AS author_id
+           FROM comments c
+           JOIN users u ON c.user_id = u.id
+           WHERE c.post_id = $1
+           ORDER BY c.created_at ASC`,
+          [post.id]
+        );
+        return { ...post, tags: tagRows, comments: commentRows };
       })
     );
 
@@ -418,7 +472,7 @@ app.get("/api/users/:username", ensureAuthenticated, async (req, res) => {
         following_count: parseInt(profileUser.following_count),
         is_following: profileUser.is_following,
       },
-      posts: postsWithTags,
+      posts: postsWithTagsAndComments,
     });
   } catch (err) {
     console.error(err);

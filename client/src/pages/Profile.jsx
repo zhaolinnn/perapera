@@ -53,7 +53,14 @@ export default function Profile({ user, onLogout }) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Failed to update follow status");
       }
-      loadProfile();
+      // Update profile user's follow status without reloading
+      setProfileUser((prev) => ({
+        ...prev,
+        is_following: !isFollowing,
+        follower_count: isFollowing
+          ? prev.follower_count - 1
+          : prev.follower_count + 1,
+      }));
     } catch (err) {
       setError(err.message);
     }
@@ -81,6 +88,38 @@ export default function Profile({ user, onLogout }) {
         });
         if (!res.ok) throw new Error("Failed to vote");
       }
+      loadProfile();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function createComment(postId, content) {
+    try {
+      const res = await fetch(`/api/posts/${postId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to post comment");
+      }
+      loadProfile();
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }
+
+  async function deleteComment(commentId) {
+    try {
+      const res = await fetch(`/api/comments/${commentId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete comment");
       loadProfile();
     } catch (err) {
       setError(err.message);
@@ -195,6 +234,9 @@ export default function Profile({ user, onLogout }) {
                         }
                       : null
                   }
+                  onComment={createComment}
+                  onDeleteComment={deleteComment}
+                  onRefresh={loadProfile}
                 />
               ))}
             </ul>

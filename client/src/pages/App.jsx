@@ -266,6 +266,45 @@ function Feed({ user, onLogout }) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Failed to update follow status");
       }
+      // Update the specific post's follow status without reloading all posts
+      setPosts((prevPosts) =>
+        prevPosts.map((post) =>
+          post.author === username
+            ? { ...post, is_following: !isFollowing }
+            : post
+        )
+      );
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function createComment(postId, content) {
+    try {
+      const res = await fetch(`/api/posts/${postId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to post comment");
+      }
+      loadPosts();
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }
+
+  async function deleteComment(commentId) {
+    try {
+      const res = await fetch(`/api/comments/${commentId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to delete comment");
       loadPosts();
     } catch (err) {
       setError(err.message);
@@ -384,6 +423,9 @@ function Feed({ user, onLogout }) {
                   onDelete={deletePost}
                   onVote={votePost}
                   onToggleFollow={toggleFollow}
+                  onComment={createComment}
+                  onDeleteComment={deleteComment}
+                  onRefresh={loadPosts}
                 />
               ))}
             </ul>
