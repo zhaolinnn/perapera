@@ -19,6 +19,14 @@ CREATE TABLE IF NOT EXISTS follows (
   PRIMARY KEY (follower_id, followed_id)
 );
 
+CREATE TABLE IF NOT EXISTS votes (
+  post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  vote_type INTEGER NOT NULL CHECK (vote_type IN (1, -1)),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (post_id, user_id)
+);
+
 CREATE TABLE IF NOT EXISTS "session" (
   sid varchar NOT NULL COLLATE "default",
   sess json NOT NULL,

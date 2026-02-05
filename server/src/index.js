@@ -140,10 +140,22 @@ app.get("/api/auth/me", (req, res) => {
 app.get("/api/posts", ensureAuthenticated, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT p.id, p.content, p.created_at, u.username AS author
+      `SELECT 
+         p.id, 
+         p.content, 
+         p.created_at, 
+         u.username AS author,
+         u.id AS author_id,
+         COALESCE(SUM(CASE WHEN v.vote_type = 1 THEN 1 ELSE 0 END), 0)::INTEGER AS upvotes,
+         COALESCE(SUM(CASE WHEN v.vote_type = -1 THEN 1 ELSE 0 END), 0)::INTEGER AS downvotes,
+         (SELECT vote_type FROM votes WHERE post_id = p.id AND user_id = $1) AS user_vote,
+         EXISTS(SELECT 1 FROM follows WHERE follower_id = $1 AND followed_id = u.id) AS is_following
        FROM posts p
        JOIN users u ON p.user_id = u.id
-       ORDER BY p.created_at DESC`
+       LEFT JOIN votes v ON v.post_id = p.id
+       GROUP BY p.id, u.username, u.id
+       ORDER BY p.created_at DESC`,
+      [req.user.id]
     );
     res.json(rows);
   } catch (err) {
@@ -241,6 +253,105 @@ app.post("/api/unfollow/:username", ensureAuthenticated, async (req, res) => {
       [req.user.id, target.id]
     );
     res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/api/posts/:id/upvote", ensureAuthenticated, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query(
+      `INSERT INTO votes (post_id, user_id, vote_type) 
+       VALUES ($1, $2, 1)
+       ON CONFLICT (post_id, user_id) 
+       DO UPDATE SET vote_type = 1`,
+      [id, req.user.id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/api/posts/:id/downvote", ensureAuthenticated, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query(
+      `INSERT INTO votes (post_id, user_id, vote_type) 
+       VALUES ($1, $2, -1)
+       ON CONFLICT (post_id, user_id) 
+       DO UPDATE SET vote_type = -1`,
+      [id, req.user.id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.delete("/api/posts/:id/vote", ensureAuthenticated, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query(
+      "DELETE FROM votes WHERE post_id = $1 AND user_id = $2",
+      [id, req.user.id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.get("/api/users/:username", ensureAuthenticated, async (req, res) => {
+  const { username } = req.params;
+  try {
+    const { rows: userRows } = await pool.query(
+      `SELECT id, username, created_at,
+       (SELECT COUNT(*) FROM posts WHERE user_id = users.id) AS post_count,
+       (SELECT COUNT(*) FROM follows WHERE followed_id = users.id) AS follower_count,
+       (SELECT COUNT(*) FROM follows WHERE follower_id = users.id) AS following_count,
+       EXISTS(SELECT 1 FROM follows WHERE follower_id = $1 AND followed_id = users.id) AS is_following
+       FROM users WHERE username = $2`,
+      [req.user.id, username]
+    );
+    const profileUser = userRows[0];
+    if (!profileUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const { rows: postRows } = await pool.query(
+      `SELECT 
+         p.id, 
+         p.content, 
+         p.created_at,
+         COALESCE(SUM(CASE WHEN v.vote_type = 1 THEN 1 ELSE 0 END), 0)::INTEGER AS upvotes,
+         COALESCE(SUM(CASE WHEN v.vote_type = -1 THEN 1 ELSE 0 END), 0)::INTEGER AS downvotes,
+         (SELECT vote_type FROM votes WHERE post_id = p.id AND user_id = $1) AS user_vote
+       FROM posts p
+       LEFT JOIN votes v ON v.post_id = p.id
+       WHERE p.user_id = $2
+       GROUP BY p.id
+       ORDER BY p.created_at DESC`,
+      [req.user.id, profileUser.id]
+    );
+
+    res.json({
+      user: {
+        id: profileUser.id,
+        username: profileUser.username,
+        created_at: profileUser.created_at,
+        post_count: parseInt(profileUser.post_count),
+        follower_count: parseInt(profileUser.follower_count),
+        following_count: parseInt(profileUser.following_count),
+        is_following: profileUser.is_following,
+      },
+      posts: postRows,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });

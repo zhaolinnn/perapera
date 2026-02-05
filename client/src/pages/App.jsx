@@ -1,4 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { Routes, Route } from "react-router-dom";
+import Header from "../components/Header.jsx";
+import PostCard from "../components/PostCard.jsx";
+import Profile from "./Profile.jsx";
 
 function useMe() {
   const [user, setUser] = useState(null);
@@ -178,38 +182,58 @@ function Feed({ user, onLogout }) {
     }
   }
 
+  async function votePost(postId, voteType) {
+    try {
+      const currentPost = posts.find((p) => p.id === postId);
+      const currentVote = currentPost.user_vote;
+
+      // If clicking the same vote, remove it
+      if (currentVote === voteType) {
+        const res = await fetch(`/api/posts/${postId}/vote`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to remove vote");
+      } else {
+        // Otherwise, set the new vote
+        const endpoint =
+          voteType === 1
+            ? `/api/posts/${postId}/upvote`
+            : `/api/posts/${postId}/downvote`;
+        const res = await fetch(endpoint, {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error("Failed to vote");
+      }
+      loadPosts();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function toggleFollow(username, isFollowing) {
+    try {
+      const endpoint = isFollowing
+        ? `/api/unfollow/${username}`
+        : `/api/follow/${username}`;
+      const res = await fetch(endpoint, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to update follow status");
+      }
+      loadPosts();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-emerald-100">
-      <header className="border-b border-emerald-100 bg-white/90 backdrop-blur">
-        <div className="mx-auto max-w-4xl px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img
-              src="/logo.png"
-              alt="Perapera logo"
-              className="h-12 w-12 object-contain"
-            />
-            <div className="flex flex-col leading-tight">
-              <span className="font-semibold text-emerald-700 text-sm">
-                Perapera
-              </span>
-              <span className="text-[11px] text-emerald-700/70">
-                Tiny thoughts in any language.
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 text-sm">
-            <span className="text-emerald-800 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full text-xs">
-              @{user.username}
-            </span>
-            <button
-              onClick={onLogout}
-              className="px-3 py-1 rounded-full border border-emerald-200 text-xs text-emerald-700 hover:bg-emerald-50"
-            >
-              Log out
-            </button>
-          </div>
-        </div>
-      </header>
+      <Header user={user} onLogout={onLogout} />
       <main className="mx-auto max-w-4xl px-4 py-6 space-y-6">
         <form
           onSubmit={createPost}
@@ -249,32 +273,14 @@ function Feed({ user, onLogout }) {
           ) : (
             <ul className="space-y-3">
               {posts.map((post) => (
-                <li
+                <PostCard
                   key={post.id}
-                  className="bg-white border border-emerald-100 rounded-2xl p-3 text-sm shadow-sm"
-                >
-                  <div className="flex justify-between items-start gap-2 mb-1">
-                    <div>
-                      <p className="font-semibold text-xs text-emerald-800">
-                        @{post.author}
-                      </p>
-                      <p className="text-[11px] text-emerald-700/70">
-                        {new Date(post.created_at).toLocaleString()}
-                      </p>
-                    </div>
-                    {post.author === user.username && (
-                      <button
-                        onClick={() => deletePost(post.id)}
-                        className="text-[11px] text-red-500 hover:text-red-400"
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </div>
-                  <p className="mt-1 text-sm text-slate-900 whitespace-pre-wrap">
-                    {post.content}
-                  </p>
-                </li>
+                  post={post}
+                  currentUser={user}
+                  onDelete={deletePost}
+                  onVote={votePost}
+                  onToggleFollow={toggleFollow}
+                />
               ))}
             </ul>
           )}
@@ -307,6 +313,14 @@ export default function App() {
     return <AuthForm onAuth={refresh} />;
   }
 
-  return <Feed user={user} onLogout={handleLogout} />;
+  return (
+    <Routes>
+      <Route path="/" element={<Feed user={user} onLogout={handleLogout} />} />
+      <Route
+        path="/users/:username"
+        element={<Profile user={user} onLogout={handleLogout} />}
+      />
+    </Routes>
+  );
 }
 
