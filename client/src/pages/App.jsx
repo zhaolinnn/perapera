@@ -363,7 +363,7 @@ export default function App() {
           user ? (
             <Feed user={user} onLogout={handleLogout} />
           ) : (
-            <Landing onAuth={refresh} />
+            <Landing onAuth={refresh} user={user} onLogout={handleLogout} />
           )
         }
       />

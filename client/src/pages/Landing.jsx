@@ -1,6 +1,65 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 
-export default function Landing({ onAuth }) {
+function FlagAnimation() {
+  const flags = ["🇨🇳", "🇯🇵", "🇰🇷", "🇫🇷", "🇪🇸", "🇩🇪", "🇮🇹", "🇵🇹"];
+  const [position, setPosition] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPosition((prev) => prev + 1);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Create an extended array for seamless looping
+  const extendedFlags = [...flags, ...flags, ...flags];
+  const centerStart = flags.length; // Start in the middle section
+
+  return (
+    <div className="relative flex items-center justify-center h-32 mt-8 overflow-hidden">
+      {extendedFlags.map((flag, index) => {
+        const offset = index - (centerStart + (position % flags.length));
+        const absOffset = Math.abs(offset);
+        const isVisible = absOffset <= 3;
+
+        if (!isVisible) return null;
+
+        // Calculate position and scale smoothly with bigger gaps
+        const xPosition = offset * 120;
+        const scale = isVisible
+          ? offset === 0
+            ? 1.4
+            : absOffset === 1
+            ? 1.1
+            : absOffset === 2
+            ? 0.9
+            : 0.7
+          : 0.5;
+        const opacity = offset === 0 ? 1 : absOffset === 1 ? 0.7 : absOffset === 2 ? 0.4 : 0.2;
+
+        // Use the actual flag index for the key to ensure React recognizes the same flag
+        const flagIndex = index % flags.length;
+
+        return (
+          <div
+            key={`flag-${flagIndex}-pos-${index}`}
+            className="absolute transition-all duration-1000 ease-in-out"
+            style={{
+              transform: `translateX(${xPosition}px) scale(${scale})`,
+              opacity: opacity,
+              willChange: "transform, opacity",
+            }}
+          >
+            <div className="text-7xl">{flag}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export default function Landing({ onAuth, user, onLogout }) {
   const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -29,38 +88,68 @@ export default function Landing({ onAuth }) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-emerald-100 to-emerald-200">
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-4xl mx-auto">
-          {/* Hero Section */}
-          <div className="text-center mb-12">
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <img
-                src="/logo.png"
-                alt="Perapera logo"
-                className="h-16 w-16 object-contain"
-              />
-              <h1 className="text-5xl font-bold tracking-tight text-emerald-800">
+      <nav className="border-b border-emerald-100 bg-white/90 backdrop-blur">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-3">
+            <img
+              src="/logo.png"
+              alt="Perapera logo"
+              className="h-12 w-12 object-contain"
+            />
+            <div className="flex flex-col leading-tight">
+              <span className="font-semibold text-emerald-700 text-sm">
                 Perapera
-              </h1>
+              </span>
+              <span className="text-[11px] text-emerald-700/70">
+                Tiny thoughts in any language.
+              </span>
             </div>
-            <p className="text-xl text-emerald-700 mb-2">
-              Share short language thoughts with friends
-            </p>
-            <p className="text-sm text-emerald-600/80">
-              Connect with language learners and share phrases, vocab, and insights
-            </p>
-          </div>
+          </Link>
+          {user && (
+            <div className="flex items-center gap-3 text-sm">
+              <Link
+                to={`/users/${user.username}`}
+                className="text-emerald-800 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full text-xs hover:bg-emerald-100 transition"
+              >
+                @{user.username}
+              </Link>
+              <button
+                onClick={onLogout}
+                className="px-3 py-1 rounded-full border border-emerald-200 text-xs text-emerald-700 hover:bg-emerald-50"
+              >
+                Log out
+              </button>
+            </div>
+          )}
+        </div>
+      </nav>
+      <div className="container mx-auto px-4 py-16">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-16 items-center">
+            {/* Left Side - Title, Description, and Flags */}
+            <div>
+              <h1 className="text-5xl font-bold tracking-tight text-emerald-800 mb-4">
+                Perapera　ペラペラ
+              </h1>
+              <p className="text-xl text-emerald-700 mb-2">
+                Share short language thoughts with friends
+              </p>
+              <p className="text-sm text-emerald-600/80 mb-8">
+                Connect with language learners and share phrases, vocab, and insights
+              </p>
+              <FlagAnimation />
+            </div>
 
-          {/* Auth Card */}
-          <div className="max-w-md mx-auto bg-white border border-emerald-100 rounded-3xl p-8 shadow-[0_18px_60px_rgba(15,118,110,0.18)]">
-            <div className="flex justify-center mb-6 bg-emerald-50 rounded-full p-0.5">
+            {/* Right Side - Auth Card */}
+            <div className="bg-white border border-emerald-100 rounded-3xl p-8 shadow-[0_18px_60px_rgba(15,118,110,0.18)] max-w-sm ml-auto lg:ml-0">
+            <div className="flex justify-center mb-6 gap-2">
               <button
                 type="button"
                 onClick={() => setMode("login")}
                 className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
                   mode === "login"
-                    ? "bg-white text-emerald-700 shadow-sm"
-                    : "text-emerald-600"
+                    ? "bg-slate-100 text-slate-900"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 Login
@@ -70,8 +159,8 @@ export default function Landing({ onAuth }) {
                 onClick={() => setMode("register")}
                 className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
                   mode === "register"
-                    ? "bg-white text-emerald-700 shadow-sm"
-                    : "text-emerald-600"
+                    ? "bg-slate-100 text-slate-900"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 Sign up
@@ -113,6 +202,7 @@ export default function Landing({ onAuth }) {
                 {mode === "login" ? "Login" : "Create account"}
               </button>
             </form>
+            </div>
           </div>
 
           {/* Features */}
