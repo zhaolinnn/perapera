@@ -141,7 +141,8 @@ export default function Landing({ onAuth, user, onLogout }) {
             </div>
 
             {/* Right Side - Auth Card */}
-            <div className="bg-white border border-emerald-100 rounded-3xl p-8 shadow-[0_18px_60px_rgba(15,118,110,0.18)] max-w-sm ml-auto lg:ml-0">
+            <div className="flex justify-end">
+            <div className="bg-white border border-emerald-100 rounded-3xl p-8 shadow-[0_18px_60px_rgba(15,118,110,0.18)] w-full max-w-md">
             <div className="flex justify-center mb-6 gap-2">
               <button
                 type="button"
@@ -202,6 +203,7 @@ export default function Landing({ onAuth, user, onLogout }) {
                 {mode === "login" ? "Login" : "Create account"}
               </button>
             </form>
+            </div>
             </div>
           </div>
 
