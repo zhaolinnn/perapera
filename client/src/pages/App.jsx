@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Header from "../components/Header.jsx";
 import PostCard from "../components/PostCard.jsx";
 import Profile from "./Profile.jsx";
+import Landing from "./Landing.jsx";
 
 function useMe() {
   const [user, setUser] = useState(null);
@@ -25,107 +26,6 @@ function useMe() {
   return { user, loading, refresh, setUser };
 }
 
-function AuthForm({ onAuth }) {
-  const [mode, setMode] = useState("login");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setError("");
-    const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
-    try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ username, password }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Request failed");
-      }
-      await onAuth();
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-emerald-50 to-emerald-100">
-      <div className="w-full max-w-md bg-white border border-emerald-100 rounded-3xl p-8 shadow-[0_18px_60px_rgba(15,118,110,0.18)]">
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <div className="h-9 w-9 rounded-2xl bg-emerald-400 flex items-center justify-center shadow-inner">
-            <span className="text-xl font-black text-white leading-none">ぺ</span>
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-emerald-700">
-            Perapera
-          </h1>
-        </div>
-        <p className="text-sm text-emerald-800/80 text-center mb-6">
-          Share short language thoughts with friends.
-        </p>
-        <div className="flex justify-center mb-6 bg-emerald-50 rounded-full p-0.5">
-          <button
-            className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
-              mode === "login"
-                ? "bg-white text-emerald-700 shadow-sm"
-                : "text-emerald-600"
-            }`}
-            onClick={() => setMode("login")}
-          >
-            Login
-          </button>
-          <button
-            className={`px-4 py-1.5 rounded-full text-xs font-medium transition ${
-              mode === "register"
-                ? "bg-white text-emerald-700 shadow-sm"
-                : "text-emerald-600"
-            }`}
-            onClick={() => setMode("register")}
-          >
-            Sign up
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium mb-1 text-emerald-900">
-              Username
-            </label>
-            <input
-              className="w-full rounded-2xl bg-emerald-50 border border-emerald-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1 text-emerald-900">
-              Password
-            </label>
-            <input
-              type="password"
-              className="w-full rounded-2xl bg-emerald-50 border border-emerald-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          {error && (
-            <p className="text-xs text-red-500 bg-red-50 border border-red-100 rounded-xl px-3 py-2">
-              {error}
-            </p>
-          )}
-          <button
-            type="submit"
-            className="w-full py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 transition text-sm font-semibold text-white shadow-[0_10px_30px_rgba(16,185,129,0.6)]"
-          >
-            {mode === "login" ? "Login" : "Create account"}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
 
 function Feed({ user, onLogout }) {
   const [posts, setPosts] = useState([]);
@@ -455,16 +355,27 @@ export default function App() {
     );
   }
 
-  if (!user) {
-    return <AuthForm onAuth={refresh} />;
-  }
-
   return (
     <Routes>
-      <Route path="/" element={<Feed user={user} onLogout={handleLogout} />} />
+      <Route
+        path="/"
+        element={
+          user ? (
+            <Feed user={user} onLogout={handleLogout} />
+          ) : (
+            <Landing onAuth={refresh} />
+          )
+        }
+      />
       <Route
         path="/users/:username"
-        element={<Profile user={user} onLogout={handleLogout} />}
+        element={
+          user ? (
+            <Profile user={user} onLogout={handleLogout} />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        }
       />
     </Routes>
   );
